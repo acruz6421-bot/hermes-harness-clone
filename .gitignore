@@ -1,0 +1,9 @@
+.venv-hivemind/
+clone/.env
+clone/state.json
+clone/state.tmp
+clone/logs/
+clone/workspace/
+__pycache__/
+*.pyc
+pip/
