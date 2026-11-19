@@ -47,7 +47,7 @@ It asks you for the Telegram bot token and your Telegram id, runs `setup.py`, an
 Requirements: Hermes Agent installed (holographic memory provider recommended), Python 3.10+, the harness CLI logged in.
 
 ```bash
-git clone https://github.com/<you>/hermes-harness-clone
+git clone https://github.com/acruz6421-bot/hermes-harness-clone
 cd hermes-harness-clone
 python setup.py --harness antigravity      # or: claude | codex  (experimental)
 start_bridge.bat                            # Windows  (./start_bridge.sh on Linux/macOS)
