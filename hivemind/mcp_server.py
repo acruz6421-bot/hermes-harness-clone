@@ -286,13 +286,17 @@ def profile_memory(profile: str) -> str:
 # ----------------------------------------------------------------- write
 @mcp.tool()
 def remember(fact: str, category: str = "general", origin: str = "inferred",
-             entities: str = "", keywords: str = "") -> str:
+             entities: str = "", keywords: str = "", force: bool = False) -> str:
     """Store ONE durable fact straight into the shared deep memory. Hermes sees it immediately.
     Use for what matters in any future session: a decision or preference of the user, an
     environment fact (port, path, account, version), a measured result. NOT task progress (use note()).
     One standalone sentence (100-250 chars) starting with the term someone would search, with a date.
     category: user_pref | project | tool | general. origin: said | confirmed | inferred.
-    entities / keywords: comma separated. Run search() first to avoid duplicates. Never store secrets."""
+    entities / keywords: comma separated. Never store secrets.
+    If a current fact already says nearly the same, nothing is stored and that fact is returned: do not
+    retry with other words; use force=True only if yours is genuinely a different fact.
+    If the new fact may CONFLICT with existing ones they are listed: tell the user, or note() it for Hermes,
+    which can change/correct the old fact (the clone never edits existing facts)."""
     fact = (fact or "").strip()
     if len(fact) < 15:
         return "Too short: write one standalone sentence."
@@ -300,7 +304,7 @@ def remember(fact: str, category: str = "general", origin: str = "inferred",
         return "Refused: looks like it contains a secret."
     payload = {"content": fact[:600], "category": category, "origin": origin, "instance": INSTANCE,
                "entities": [e.strip() for e in entities.split(",") if e.strip()],
-               "keywords": [k.strip() for k in keywords.split(",") if k.strip()]}
+               "keywords": [k.strip() for k in keywords.split(",") if k.strip()], "force": bool(force)}
     cmd = [hermes_python(), str(HERE / "write_fact.py"), "--json", json.dumps(payload, ensure_ascii=False),
            "--db", str(FACT_DB), "--hermes-home", str(HERMES)]
     try:
@@ -314,7 +318,20 @@ def remember(fact: str, category: str = "general", origin: str = "inferred",
         return f"Failed to store: {(r.stderr or r.stdout)[-400:]}"
     if not out.get("ok"):
         return f"Refused: {out.get('error')}"
-    return f"Stored as fact #{out['fact_id']}." if out.get("created") else f"Already existed (#{out['fact_id']})."
+    dup = out.get("near_duplicate")
+    if dup:
+        return (f"Not stored: fact #{dup['fact_id']} already says nearly the same:\n  {dup['content']}\n"
+                "If yours is genuinely different, call remember() again with force=True.")
+    if not out.get("created"):
+        return f"Already existed (#{out['fact_id']})."
+    msg = f"Stored as fact #{out['fact_id']}."
+    if out.get("possible_conflicts"):
+        msg += ("\nPossible conflict with:\n" + "\n".join(f"  #{c['fact_id']}: {c['content']}"
+                                                      for c in out["possible_conflicts"])
+                + "\nIf the old fact is outdated or wrong, tell the user or note() it so Hermes changes it.")
+    if out.get("similar"):
+        msg += "\nSimilar: " + "; ".join(f"#{c['fact_id']}" for c in out["similar"])
+    return msg
 
 
 @mcp.tool()

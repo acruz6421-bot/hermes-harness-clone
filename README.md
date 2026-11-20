@@ -64,7 +64,7 @@ your bot → Bot Settings → Threads Settings → Threaded Mode ON**.
 | `search()`, `about()` | Fact store search / everything about an entity |
 | `conversations()`, `read_session()` | Full-text search and read of every Hermes session, all profiles |
 | `profile_memory()` | Core memory of a specialist profile |
-| `remember()` | Writes a fact straight into the fact store (same API Hermes uses) |
+| `remember()` | Writes a fact straight into the fact store (same API Hermes uses). A near-duplicate of a current fact is not stored (that fact is returned instead; `force=True` overrides); facts that may conflict with the new one are listed so the agent can flag them |
 | `note()`, `notes()` | Journal of what the clone did, for Hermes to consolidate |
 | `file_lock()` | Advisory locks so Hermes and the clone don't edit the same file at once |
 | `ask_profile()` | Runs a request on a Hermes profile (`default` = main Hermes) and returns the answer |
@@ -82,6 +82,10 @@ Antigravity only: `/conversations`, `/continue <id>` (continue a desktop-app con
 - Owner-only bot: every other user and chat is ignored silently.
 - `MAX_TURNS_PER_HOUR=60` cap on harness turns started from Telegram.
 - `remember()` / `note()` refuse text that looks like a secret.
+- The clone only **adds** facts; it never changes or deletes existing ones. Each write is tagged with the instance
+  that made it (`via: hivemind`, e.g. `clone-antigravity`). Near-duplicates are caught before writing, and
+  possible conflicts are reported back to the agent, which tells the user or leaves a `note()` so Hermes can
+  `change`/`correct` the old fact (with full history and `revert`).
 - Optional `SENSITIVE_REGEX` + `SENSITIVE_PROFILE`: matching messages go to a Hermes profile (e.g. a local model) and never reach the harness.
 - Use a **new** Telegram bot. One token can only be polled by one process.
 
